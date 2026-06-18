@@ -17,7 +17,8 @@ const API = (() => {
   async function authFetch(url, options = {}) {
     const token = await getToken();
     if (!token) throw new Error('Sessão expirada. Faça login novamente.');
-    const res = await fetch(url, {
+    const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '';
+    const res = await fetch(`${baseUrl}${url}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',

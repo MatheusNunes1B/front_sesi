@@ -96,7 +96,8 @@
 
     try {
       /* Chama a API Express para validar + devolver sessão */
-      const res = await fetch('/api/auth/login', {
+      const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '';
+      const res = await fetch(`${baseUrl}/api/auth/login`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ identifier: id, password: pw }),
