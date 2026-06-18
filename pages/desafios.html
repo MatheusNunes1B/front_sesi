@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Desafios — SESI Leitura</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item" data-page="home.html"><span class="nav-icon">🏠</span>Início</div>
+  <div class="nav-item" data-page="ranking.html"><span class="nav-icon">🏆</span>Ranking</div>
+  <div class="nav-item active" data-page="desafios.html"><span class="nav-icon">🎯</span>Desafios</div>
+  <div class="nav-item" data-page="conquistas.html"><span class="nav-icon">🥇</span>Conquistas</div>
+  <div class="nav-item" data-page="perfil.html"><span class="nav-icon">👤</span>Perfil</div>
+</nav>
+
+<div class="page-content">
+  <div class="page-header">
+    <div class="greeting">Desafios 🎯</div>
+    <div class="sub-greeting">Complete os desafios e ganhe conquistas!</div>
+  </div>
+
+  <div class="section-pad" id="challenges-list">
+    <div style="text-align:center;padding:30px;color:var(--gray-400);font-weight:600">Carregando desafios…</div>
+  </div>
+
+  <!-- TIP -->
+  <div class="section-pad">
+    <div class="card" style="display:flex;gap:12px;align-items:flex-start;background:var(--gold-light);border:none">
+      <div style="font-size:24px;flex-shrink:0">💡</div>
+      <div>
+        <div style="font-size:14px;font-weight:800;color:#7A5200;margin-bottom:4px">Dica</div>
+        <div style="font-size:13px;font-weight:600;color:#7A5200;line-height:1.5">
+          Complete sua meta diária de <strong>16 minutos</strong> todos os dias para avançar rapidamente nos desafios!
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
+<script>
+(async function () {
+  const profile = await Auth.requireAuth();
+  if (!profile) return;
+
+  /* ── Navegação ───────────────────────────────────────────────── */
+  document.querySelectorAll('.nav-item').forEach(item =>
+    item.addEventListener('click', () => window.location.href = item.dataset.page)
+  );
+
+  /* ── Carrega progresso para calcular desafios ────────────────── */
+  try {
+    const [progSemana, progMes] = await Promise.all([
+      API.getProgresso('semana'),
+      API.getProgresso('mes'),
+    ]);
+
+    const desafios = API.computeDesafios(progSemana.totalPeriodo, progMes.totalPeriodo);
+
+    document.getElementById('challenges-list').innerHTML = desafios.map(ch => {
+      const pct = Math.min(100, Math.round((ch.current / ch.goal) * 100));
+      const complete = pct >= 100;
+      return `
+        <div class="challenge-card">
+          <div class="challenge-icon">${ch.icon}</div>
+          <div class="challenge-info">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px">${ch.tipo}</div>
+                <div class="challenge-name">${ch.nome}</div>
+              </div>
+              ${complete
+                ? '<div class="badge badge-green">Completo! ✅</div>'
+                : `<div class="badge badge-red">${pct}%</div>`}
+            </div>
+            <div class="challenge-progress" style="margin-top:10px">
+              <div class="prog-bar-wrap" style="height:8px">
+                <div class="prog-bar-fill" style="width:${pct}%;${complete ? 'background:var(--green)' : ''}"></div>
+              </div>
+              <div class="prog-text" style="margin-top:4px">${ch.current} / ${ch.goal} min</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('[desafios] Error:', err);
+    document.getElementById('challenges-list').innerHTML =
+      '<div style="text-align:center;padding:30px;color:var(--gray-400);font-weight:600">Erro ao carregar desafios.</div>';
+  }
+
+})();
+</script>
+</body>
+</html>

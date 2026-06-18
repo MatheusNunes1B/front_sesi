@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Perfil — SESI Leitura</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+<nav class="bottom-nav">
+  <div class="nav-item" data-page="home.html"><span class="nav-icon">🏠</span>Início</div>
+  <div class="nav-item" data-page="ranking.html"><span class="nav-icon">🏆</span>Ranking</div>
+  <div class="nav-item" data-page="desafios.html"><span class="nav-icon">🎯</span>Desafios</div>
+  <div class="nav-item" data-page="conquistas.html"><span class="nav-icon">🥇</span>Conquistas</div>
+  <div class="nav-item active" data-page="perfil.html"><span class="nav-icon">👤</span>Perfil</div>
+</nav>
+
+<div class="page-content">
+  <div class="page-header" style="padding-bottom:36px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="greeting">Meu Perfil</div>
+      <button class="btn-icon" style="background:rgba(255,255,255,0.2);color:white;font-size:18px" id="btn-settings">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Avatar -->
+  <div class="profile-avatar-wrap" style="margin-top:-20px;z-index:2;position:relative">
+    <div class="profile-avatar" id="profile-avatar">👤</div>
+    <div class="profile-name" id="profile-name">—</div>
+    <div class="profile-rm" id="profile-rm">RM: —</div>
+    <div class="profile-turma" id="profile-turma">—</div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stat-row" style="margin-top:16px">
+    <div class="stat-cell">
+      <div class="stat-cell-num" id="stat-month">—</div>
+      <div class="stat-cell-label">min este mês</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-cell-num" id="stat-total">—</div>
+      <div class="stat-cell-label">min no total</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-cell-num" id="stat-conquests">—</div>
+      <div class="stat-cell-label">conquistas</div>
+    </div>
+  </div>
+
+  <!-- Conquests mini -->
+  <div class="section-pad" style="margin-top:16px">
+    <div class="section-title">Conquistas <a href="conquistas.html">Ver todas</a></div>
+    <div class="card">
+      <div class="conquest-grid" id="mini-conquests" style="grid-template-columns:repeat(4,1fr)"></div>
+    </div>
+  </div>
+
+  <!-- Progress this week -->
+  <div class="section-pad">
+    <div class="section-title">Esta semana</div>
+    <div class="card">
+      <div class="week-chart" id="profile-chart" style="height:60px"></div>
+    </div>
+  </div>
+
+  <!-- Logout -->
+  <div class="section-pad" style="margin-top:8px">
+    <button class="btn btn-secondary btn-full" id="btn-logout">
+      🚪 Sair da conta
+    </button>
+  </div>
+</div>
+
+<script src="../js/db.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+(function() {
+  const user = Auth.requireAuth();
+  if (!user) return;
+
+  document.querySelectorAll('.nav-item').forEach(item =>
+    item.addEventListener('click', () => window.location.href = item.dataset.page)
+  );
+
+  document.getElementById('profile-avatar').textContent = user.avatar || '👤';
+  document.getElementById('profile-name').textContent = user.nome;
+  document.getElementById('profile-rm').textContent = `RM: ${user.rm}`;
+  document.getElementById('profile-turma').textContent = `Turma ${user.turma}`;
+  document.getElementById('stat-month').textContent = DB.getMonthTotal(user.id);
+  document.getElementById('stat-total').textContent = DB.getAllTimeTotal(user.id);
+
+  const conquests = DB.getConquests(user.id);
+  const unlockedCount = conquests.filter(c => c.unlocked).length;
+  document.getElementById('stat-conquests').textContent = `${unlockedCount}/${conquests.length}`;
+
+  document.getElementById('mini-conquests').innerHTML = conquests.slice(0, 4).map(c => `
+    <div class="conquest-item">
+      <div class="conquest-badge ${c.unlocked ? '' : 'locked'}">${c.icon}</div>
+      <div class="conquest-name">${c.nome}</div>
+    </div>
+  `).join('');
+
+  // Mini chart
+  const weekData = DB.getWeekData(user.id);
+  const maxMins = Math.max(...weekData.map(d => d.mins), 16);
+  document.getElementById('profile-chart').innerHTML = weekData.map(d => {
+    const h = Math.max(4, Math.round((d.mins / maxMins) * 52));
+    return `<div class="week-bar-wrap">
+      <div class="week-bar ${d.isToday ? 'today' : d.mins > 0 ? 'active' : ''}" style="height:${h}px"></div>
+      <div class="week-day ${d.isToday ? 'active' : ''}">${d.day}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    if (confirm('Deseja sair da conta?')) {
+      DB.logout();
+      window.location.href = '../../index.html';
+    }
+  });
+
+  document.getElementById('btn-settings').addEventListener('click', () =>
+    Auth.showToast('Configurações em breve!')
+  );
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Início — SESI Leitura</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item active" data-page="home.html"><span class="nav-icon">🏠</span>Início</div>
+  <div class="nav-item" data-page="ranking.html"><span class="nav-icon">🏆</span>Ranking</div>
+  <div class="nav-item" data-page="desafios.html"><span class="nav-icon">🎯</span>Desafios</div>
+  <div class="nav-item" data-page="conquistas.html"><span class="nav-icon">🥇</span>Conquistas</div>
+  <div class="nav-item" data-page="perfil.html"><span class="nav-icon">👤</span>Perfil</div>
+</nav>
+
+<div class="page-content">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-header-row">
+      <div>
+        <div class="greeting" id="greeting">Olá! 👋</div>
+        <div class="sub-greeting">Registre sua leitura de hoje</div>
+      </div>
+      <button class="btn-notif" id="btn-notif">🔔</button>
+    </div>
+  </div>
+
+  <!-- META CARD -->
+  <div class="meta-card" id="meta-card">
+    <div class="meta-row">
+      <div class="meta-stat">
+        <div class="meta-stat-num" id="meta-mins">—</div>
+        <div class="meta-stat-label">min lidos hoje</div>
+      </div>
+      <div class="progress-circle">
+        <svg width="90" height="90" viewBox="0 0 90 90">
+          <circle class="progress-circle-bg" cx="45" cy="45" r="38" />
+          <circle class="progress-circle-fg" id="progress-fg" cx="45" cy="45" r="38"
+                  stroke-dasharray="238.76" stroke-dashoffset="238.76" />
+        </svg>
+        <div class="progress-circle-text">
+          <div class="progress-circle-pct" id="progress-pct">—</div>
+          <div class="progress-circle-lbl">da meta</div>
+        </div>
+      </div>
+    </div>
+    <div class="meta-info" id="meta-info">Carregando progresso…</div>
+    <button class="btn btn-primary btn-full" style="margin-top:16px" id="btn-registrar">
+      📝 Registrar leitura
+    </button>
+  </div>
+
+  <!-- WEEKLY CHART -->
+  <div class="section-pad">
+    <div class="section-title">Esta semana</div>
+    <div class="card">
+      <div class="week-chart" id="week-chart" style="height:80px"></div>
+    </div>
+  </div>
+
+  <!-- SCHOOL THERMOMETER -->
+  <div class="section-pad">
+    <div class="section-title">Termômetro da escola 🌡️</div>
+    <div class="thermo-card" id="thermo-card">
+      <div style="text-align:center;padding:20px;color:var(--gray-400);font-weight:600">Carregando…</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
+<script>
+(async function () {
+  const profile = await Auth.requireAuth();
+  if (!profile) return;
+
+  /* ── Navegação ───────────────────────────────────────────────── */
+  document.querySelectorAll('.nav-item').forEach(item =>
+    item.addEventListener('click', () => window.location.href = item.dataset.page)
+  );
+
+  /* ── Saudação ────────────────────────────────────────────────── */
+  const firstName = (profile.nome || 'Aluno').split(' ')[0];
+  document.getElementById('greeting').textContent = `Olá, ${firstName}! 👋`;
+
+  /* ── Botão registrar ─────────────────────────────────────────── */
+  document.getElementById('btn-registrar').addEventListener('click', () => {
+    window.location.href = 'registrar.html';
+  });
+
+  document.getElementById('btn-notif').addEventListener('click', () => {
+    Auth.showToast('Notificações em breve!');
+  });
+
+  /* ── Progresso semanal ───────────────────────────────────────── */
+  try {
+    const prog = await API.getProgresso('semana');
+    const LIMIT = API.DAILY_LIMIT;
+    const pct = Math.min(100, Math.round((prog.lidoHoje / LIMIT) * 100));
+
+    document.getElementById('meta-mins').textContent = prog.lidoHoje;
+    document.getElementById('progress-pct').textContent = `${pct}%`;
+
+    // Anima o círculo de progresso
+    const circumference = 2 * Math.PI * 38; // ≈ 238.76
+    const offset = circumference - (pct / 100) * circumference;
+    document.getElementById('progress-fg').style.strokeDashoffset = offset;
+
+    if (prog.restanteHoje > 0) {
+      document.getElementById('meta-info').innerHTML =
+        `Faltam <span>${prog.restanteHoje} min</span> para completar a meta diária de <span>${LIMIT} min</span>.`;
+    } else {
+      document.getElementById('meta-info').innerHTML =
+        `🎉 <span>Meta diária completa!</span> Parabéns!`;
+    }
+
+    // Gráfico semanal
+    const days = API.buildWeekDays(prog.porDia);
+    const maxMins = Math.max(...days.map(d => d.mins), LIMIT);
+    document.getElementById('week-chart').innerHTML = days.map(d => {
+      const h = Math.max(4, Math.round((d.mins / maxMins) * 72));
+      return `<div class="week-bar-wrap">
+        <div class="week-bar ${d.isToday ? 'today' : d.mins > 0 ? 'active' : ''}" style="height:${h}px"></div>
+        <div class="week-day ${d.isToday ? 'active' : ''}">${d.day}</div>
+      </div>`;
+    }).join('');
+
+  } catch (err) {
+    console.error('[home] Progresso error:', err);
+    document.getElementById('meta-info').textContent = 'Erro ao carregar progresso.';
+  }
+
+  /* ── Termômetro da escola ────────────────────────────────────── */
+  try {
+    const thermo = await API.getTermometro();
+    document.getElementById('thermo-card').innerHTML = `
+      <div class="thermo-header">
+        <div>
+          <div class="thermo-accent">${thermo.totalEscola.toLocaleString('pt-BR')} min</div>
+          <div class="thermo-sub">Total lido pela escola</div>
+        </div>
+        <div class="badge badge-red">${thermo.percentual}%</div>
+      </div>
+      <div class="prog-bar-wrap" style="height:10px;margin-top:14px">
+        <div class="prog-bar-fill" style="width:${thermo.percentual}%"></div>
+      </div>
+      <div class="thermo-goal" style="margin-top:8px">
+        <span class="lbl">Meta</span>
+        <span class="val">${Number(thermo.meta).toLocaleString('pt-BR')} min</span>
+      </div>
+    `;
+  } catch (err) {
+    console.error('[home] Termômetro error:', err);
+    document.getElementById('thermo-card').innerHTML =
+      '<div style="text-align:center;padding:20px;color:var(--gray-400);font-weight:600">Erro ao carregar termômetro.</div>';
+  }
+
+})();
+</script>
+</body>
+</html>

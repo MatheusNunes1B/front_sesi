@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Para Responsáveis — SESI Leitura</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+<div class="page-content" style="padding-bottom:20px">
+
+  <div class="resp-header" style="border-radius:0 0 var(--radius-lg) var(--radius-lg);margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:13px;font-weight:700;opacity:.8;margin-bottom:2px">Olá,</div>
+        <div style="font-size:22px;font-weight:900" id="resp-nome">—</div>
+      </div>
+      <button class="btn-icon" style="background:rgba(255,255,255,0.2);color:white;font-size:20px" id="btn-resp-logout">🚪</button>
+    </div>
+    <div style="margin-top:8px;font-size:14px;font-weight:600;opacity:.85">
+      Acompanhe o progresso do seu filho(a)
+    </div>
+  </div>
+
+  <div style="padding:0 16px">
+    <div style="font-size:15px;font-weight:800;margin-bottom:12px;color:var(--gray-900)">📊 Progresso</div>
+    <div id="filhos-list"></div>
+  </div>
+
+  <div style="padding:0 16px;margin-top:16px">
+    <div style="font-size:15px;font-weight:800;margin-bottom:12px;color:var(--gray-900)">🔔 Novidades</div>
+    <div class="resp-card" id="novidades-list"></div>
+  </div>
+
+</div>
+
+<script src="../js/db.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+(function() {
+  const user = Auth.requireAuth();
+  if (!user) return;
+  if (user.tipo !== 'responsavel') {
+    window.location.href = 'home.html';
+    return;
+  }
+
+  document.getElementById('resp-nome').textContent = user.nome;
+
+  const filhos = DB.getFilhos(user.id);
+
+  document.getElementById('filhos-list').innerHTML = filhos.map(f => {
+    const pct = Math.min(100, Math.round((f.monthMins / 320) * 100));
+    const unlocked = f.conquests.filter(c => c.unlocked);
+    return `
+      <div class="resp-card" style="margin-bottom:12px">
+        <div class="resp-child-row">
+          <div class="resp-avatar">${f.avatar}</div>
+          <div class="resp-child-info">
+            <div class="resp-child-name">${f.nome}</div>
+            <div class="resp-child-rm">RM: ${f.rm} · Turma ${f.turma}</div>
+          </div>
+          <div>
+            <div class="resp-mins">${f.monthMins} <small>min</small></div>
+            <div style="font-size:11px;color:var(--gray-400);font-weight:600">este mês</div>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:4px">
+            <span>Progresso de ${f.nome.split(' ')[0]}</span><span>${pct}%</span>
+          </div>
+          <div class="prog-bar-wrap" style="height:8px">
+            <div class="prog-bar-fill" style="width:${pct}%;background:var(--purple)"></div>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:700;color:var(--gray-600)">Conquistas:</span>
+          ${unlocked.map(c => `<span style="font-size:20px" title="${c.nome}">${c.icon}</span>`).join('')}
+          ${unlocked.length === 0 ? '<span style="font-size:12px;color:var(--gray-400);font-weight:600">Nenhuma ainda</span>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('') || '<div class="resp-card"><p style="color:var(--gray-400);font-weight:600;text-align:center">Nenhum filho(a) associado.</p></div>';
+
+  // Novidades
+  document.getElementById('novidades-list').innerHTML = filhos.map(f => {
+    const logs = []; // Would show recent activity
+    return `<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100)">
+      <span style="font-size:20px">${f.avatar}</span>
+      <div>
+        <div style="font-size:13px;font-weight:700">${f.nome.split(' ')[0]} leu hoje! 📚</div>
+        <div style="font-size:12px;color:var(--gray-400);font-weight:600">${DB.getTodayMinutes(f.id)} minutos registrados</div>
+      </div>
+    </div>`;
+  }).join('') || '<p style="color:var(--gray-400);font-weight:600;font-size:13px">Nada novo ainda.</p>';
+
+  document.getElementById('btn-resp-logout').addEventListener('click', () => {
+    if (confirm('Deseja sair?')) { DB.logout(); window.location.href = '../../index.html'; }
+  });
+})();
+</script>
+</body>
+</html>

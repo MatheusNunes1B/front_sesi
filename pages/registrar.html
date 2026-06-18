@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Registrar Leitura — SESI</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body style="background:var(--off-white)">
+
+<!-- HEADER -->
+<div class="register-header">
+  <button class="back-btn" id="btn-back">←</button>
+  <h2>Registrar leitura</h2>
+</div>
+
+<!-- FLIP DISPLAY -->
+<div class="flip-label" style="margin-top:28px">Quantos minutos você leu hoje?</div>
+<div class="flip-display">
+  <div class="flip-digit" id="digit-tens">0</div>
+  <div class="flip-digit" id="digit-ones">0</div>
+</div>
+<div class="flip-label" style="margin-top:4px">minutos</div>
+
+<!-- REMAINING HINT -->
+<div class="remaining-hint" id="remaining-hint">Carregando…</div>
+
+<!-- ERROR / SUCCESS -->
+<div id="reg-alert" class="alert hidden" style="margin:0 20px 12px"></div>
+
+<!-- NUMPAD -->
+<div class="numpad">
+  <button class="numpad-btn" data-val="1">1</button>
+  <button class="numpad-btn" data-val="2">2</button>
+  <button class="numpad-btn" data-val="3">3</button>
+  <button class="numpad-btn" data-val="4">4</button>
+  <button class="numpad-btn" data-val="5">5</button>
+  <button class="numpad-btn" data-val="6">6</button>
+  <button class="numpad-btn" data-val="7">7</button>
+  <button class="numpad-btn" data-val="8">8</button>
+  <button class="numpad-btn" data-val="9">9</button>
+  <button class="numpad-btn" data-val="del">⌫</button>
+  <button class="numpad-btn" data-val="0">0</button>
+  <button class="numpad-btn ok-btn" id="btn-ok">OK</button>
+</div>
+
+<!-- TIP -->
+<div class="tip-box">
+  <div class="tip-icon">💡</div>
+  <div class="tip-text" id="tip-text">
+    A meta diária recomendada é de <strong>16 minutos</strong> de leitura.
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-screen hidden" id="success-screen">
+  <div class="success-icon">📚</div>
+  <div class="success-title">Você é um leitor incrível! ✨</div>
+  <div class="success-sub" id="success-msg">Você registrou <strong>—</strong> minutos hoje.</div>
+  <div class="success-meta" id="success-meta">—</div>
+  <button class="btn" style="background:white;color:var(--red);font-weight:900;margin-top:8px;border-radius:var(--radius-full);padding:14px 32px" id="btn-entendi">Entendido! 🎉</button>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
+<script>
+(async function () {
+  const profile = await Auth.requireAuth();
+  if (!profile) return;
+
+  let inputStr = '';
+  let restanteHoje = API.DAILY_LIMIT;
+  let lidoHoje = 0;
+
+  const digitTens = document.getElementById('digit-tens');
+  const digitOnes = document.getElementById('digit-ones');
+  const hintEl    = document.getElementById('remaining-hint');
+  const alertEl   = document.getElementById('reg-alert');
+  const tipEl     = document.getElementById('tip-text');
+
+  /* ── Carrega progresso atual ────────────────────────────────── */
+  try {
+    const prog = await API.getProgresso('semana');
+    lidoHoje = prog.lidoHoje;
+    restanteHoje = prog.restanteHoje;
+    updateHint();
+  } catch (err) {
+    hintEl.textContent = 'Erro ao carregar progresso.';
+    console.error(err);
+  }
+
+  function updateHint() {
+    if (restanteHoje <= 0) {
+      hintEl.innerHTML = '🎉 Meta de hoje já completa!';
+      hintEl.style.color = 'var(--green)';
+    } else {
+      hintEl.innerHTML = `Restam <span>${restanteHoje} min</span> para sua meta diária.`;
+      hintEl.style.color = '';
+    }
+    if (lidoHoje > 0) {
+      tipEl.innerHTML = `Você já registrou <strong>${lidoHoje} min</strong> hoje. Restam <strong>${restanteHoje} min</strong> disponíveis.`;
+    }
+  }
+
+  function updateDisplay() {
+    const val = inputStr.padStart(2, '0').slice(-2);
+    digitTens.textContent = val[0];
+    digitOnes.textContent = val[1];
+    // Animate
+    [digitTens, digitOnes].forEach(d => {
+      d.style.transform = 'scale(1.08)';
+      setTimeout(() => d.style.transform = '', 100);
+    });
+    alertEl.classList.add('hidden');
+  }
+
+  function showAlert(msg, type = 'error') {
+    alertEl.textContent = msg;
+    alertEl.className = `alert alert-${type}`;
+    alertEl.classList.remove('hidden');
+  }
+
+  /* ── Numpad ─────────────────────────────────────────────────── */
+  document.querySelectorAll('.numpad-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.val;
+      if (val === 'del') {
+        inputStr = inputStr.slice(0, -1);
+        updateDisplay();
+      } else if (val !== undefined) {
+        if (inputStr.length >= 2) return;
+        inputStr += val;
+        updateDisplay();
+      }
+    });
+  });
+
+  document.getElementById('btn-ok').addEventListener('click', submitReading);
+
+  /* ── Enviar leitura ─────────────────────────────────────────── */
+  async function submitReading() {
+    const mins = parseInt(inputStr, 10) || 0;
+    if (mins < 1) { showAlert('Digite quantos minutos você leu.'); return; }
+
+    // Validação front-end
+    if (mins > restanteHoje) {
+      showAlert(restanteHoje <= 0
+        ? `Você já atingiu sua meta de ${API.DAILY_LIMIT} minutos hoje! 🎉`
+        : `Você só pode registrar mais ${restanteHoje} min hoje (meta: ${API.DAILY_LIMIT} min/dia).`,
+        restanteHoje <= 0 ? 'info' : 'error'
+      );
+      return;
+    }
+
+    // Chama API backend
+    try {
+      const result = await API.registrarLeitura(mins);
+
+      // Sucesso — mostra overlay
+      document.getElementById('success-msg').innerHTML =
+        `Você registrou <strong>${mins} minutos</strong> hoje.`;
+      const rem = result.restanteHoje ?? (restanteHoje - mins);
+      const total = result.totalHoje ?? (lidoHoje + mins);
+      document.getElementById('success-meta').textContent =
+        rem > 0
+          ? `Total hoje: ${total} min — Restam ${rem} min para a meta! 📖`
+          : `Total hoje: ${total} min — Meta diária completa! 🏆`;
+      document.getElementById('success-screen').classList.remove('hidden');
+
+    } catch (err) {
+      showAlert(err.message || 'Erro ao registrar leitura.');
+    }
+  }
+
+  /* ── Navegação ──────────────────────────────────────────────── */
+  document.getElementById('btn-entendi').addEventListener('click', () => {
+    window.location.href = 'home.html';
+  });
+
+  document.getElementById('btn-back').addEventListener('click', () => {
+    window.location.href = 'home.html';
+  });
+})();
+</script>
+</body>
+</html>

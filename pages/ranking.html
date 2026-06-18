@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Ranking — SESI Leitura</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item" data-page="home.html"><span class="nav-icon">🏠</span>Início</div>
+  <div class="nav-item active" data-page="ranking.html"><span class="nav-icon">🏆</span>Ranking</div>
+  <div class="nav-item" data-page="desafios.html"><span class="nav-icon">🎯</span>Desafios</div>
+  <div class="nav-item" data-page="conquistas.html"><span class="nav-icon">🥇</span>Conquistas</div>
+  <div class="nav-item" data-page="perfil.html"><span class="nav-icon">👤</span>Perfil</div>
+</nav>
+
+<div class="page-content">
+  <div class="page-header">
+    <div class="greeting">Ranking das Turmas 🏆</div>
+    <div class="sub-greeting">Quem está lendo mais?</div>
+  </div>
+
+  <div class="section-pad">
+    <div id="ranking-turmas">
+      <div style="text-align:center;padding:30px;color:var(--gray-400);font-weight:600">Carregando ranking…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
+<script>
+(async function () {
+  const profile = await Auth.requireAuth();
+  if (!profile) return;
+
+  /* ── Navegação ───────────────────────────────────────────────── */
+  document.querySelectorAll('.nav-item').forEach(item =>
+    item.addEventListener('click', () => window.location.href = item.dataset.page)
+  );
+
+  const medals   = ['🥇', '🥈', '🥉'];
+  const posClass = ['gold', 'silver', 'bronze'];
+  const emojis   = ['🌟', '📚', '📖', '✨', '🔥'];
+
+  /* ── Ranking por turma ───────────────────────────────────────── */
+  try {
+    const data = await API.getRankingTurmas();
+    const ranking = data.ranking || [];
+
+    if (ranking.length === 0) {
+      document.getElementById('ranking-turmas').innerHTML =
+        '<div style="text-align:center;padding:30px;color:var(--gray-400);font-weight:600">Nenhum dado de ranking disponível ainda.</div>';
+      return;
+    }
+
+    const myTurma = `${profile.turma} - ${profile.ano}`;
+
+    document.getElementById('ranking-turmas').innerHTML =
+      '<div class="ranking-list">' +
+      ranking.map((t, i) => `
+        <div class="ranking-item ${t.turma === myTurma ? 'card' : ''}">
+          <div class="rank-pos ${posClass[i] || ''}">${i < 3 ? medals[i] : (i + 1) + 'º'}</div>
+          <div class="rank-emoji">${emojis[i % emojis.length]}</div>
+          <div class="rank-info">
+            <div class="rank-name">Turma ${t.turma}</div>
+            <div class="rank-school">SESI</div>
+          </div>
+          <div class="rank-mins">${t.totalMinutos.toLocaleString('pt-BR')} <small>min</small></div>
+        </div>
+      `).join('') +
+      '</div>';
+
+  } catch (err) {
+    console.error('[ranking] Error:', err);
+    document.getElementById('ranking-turmas').innerHTML =
+      '<div style="text-align:center;padding:30px;color:var(--gray-400);font-weight:600">Erro ao carregar ranking.</div>';
+  }
+
+})();
+</script>
+</body>
+</html>

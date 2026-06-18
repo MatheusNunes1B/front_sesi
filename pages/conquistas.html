@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Conquistas — SESI Leitura</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+<nav class="bottom-nav">
+  <div class="nav-item" data-page="home.html"><span class="nav-icon">🏠</span>Início</div>
+  <div class="nav-item" data-page="ranking.html"><span class="nav-icon">🏆</span>Ranking</div>
+  <div class="nav-item" data-page="desafios.html"><span class="nav-icon">🎯</span>Desafios</div>
+  <div class="nav-item active" data-page="conquistas.html"><span class="nav-icon">🥇</span>Conquistas</div>
+  <div class="nav-item" data-page="perfil.html"><span class="nav-icon">👤</span>Perfil</div>
+</nav>
+
+<div class="page-content">
+  <div class="page-header">
+    <div class="greeting">Conquistas 🥇</div>
+    <div class="sub-greeting">Suas conquistas de leitura</div>
+  </div>
+
+  <div class="section-pad">
+    <!-- First unlocked conquest hero -->
+    <div id="conquest-hero" class="card" style="text-align:center;margin-bottom:16px;display:none">
+      <div id="conquest-hero-icon" style="font-size:56px;margin-bottom:8px"></div>
+      <div style="font-size:18px;font-weight:900" id="conquest-hero-name"></div>
+      <div style="font-size:13px;color:var(--gray-600);font-weight:600;margin-top:4px" id="conquest-hero-desc"></div>
+      <div style="margin-top:10px;display:inline-block" class="badge badge-green">Desbloqueada! ✨</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;color:var(--gray-400);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px">
+        Todas as conquistas
+      </div>
+      <div class="conquest-grid" id="conquest-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/db.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+(function() {
+  const user = Auth.requireAuth();
+  if (!user) return;
+
+  document.querySelectorAll('.nav-item').forEach(item =>
+    item.addEventListener('click', () => window.location.href = item.dataset.page)
+  );
+
+  const conquests = DB.getConquests(user.id);
+  const unlocked = conquests.filter(c => c.unlocked);
+
+  if (unlocked.length > 0) {
+    const latest = unlocked[unlocked.length - 1];
+    document.getElementById('conquest-hero').style.display = 'block';
+    document.getElementById('conquest-hero-icon').textContent = latest.icon;
+    document.getElementById('conquest-hero-name').textContent = latest.nome;
+    document.getElementById('conquest-hero-desc').textContent = latest.desc;
+  }
+
+  document.getElementById('conquest-grid').innerHTML = conquests.map(c => `
+    <div class="conquest-item">
+      <div class="conquest-badge ${c.unlocked ? '' : 'locked'}">${c.icon}</div>
+      <div class="conquest-name">${c.nome}</div>
+      ${c.unlocked ? '<div class="badge badge-green" style="font-size:10px">✓</div>' : '<div style="font-size:10px;color:var(--gray-400);font-weight:600">Bloqueada</div>'}
+    </div>
+  `).join('');
+})();
+</script>
+</body>
+</html>
