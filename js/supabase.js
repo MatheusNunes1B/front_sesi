@@ -7,7 +7,7 @@
 const SUPABASE_URL  = 'https://svzbajwsraotjasiwkrg.supabase.co';      // ex: https://xyzxyz.supabase.co
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2emJhandzcmFvdGphc2l3a3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Nzc2MDcsImV4cCI6MjA5NzE1MzYwN30.-MwysYIe9-i1lMZOYl27FNEoT1pPtOu8oGpwuAadWGE'; // chave pública (anon/public)
 
-const API_BASE_URL = 'http://localhost:3000'; // Mude para a URL de produção do backend ao realizar o deploy
+const API_BASE_URL = 'https://back-sesi.vercel.app'; // URL de produção do backend no Vercel
 
 const { createClient } = supabase;
 const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
